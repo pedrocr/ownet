@@ -168,7 +168,7 @@ module OWNet
         @use_cache = true
       end
       
-      self.use_cache(@use_cache)
+      self.use_cache = @use_cache
     end
     
     def to_s
@@ -204,7 +204,7 @@ module OWNet
       end
     end
     
-    def use_cache(use)
+    def use_cache=(use)
       @use_cache = use
       if use
         @use_path = @path
@@ -248,11 +248,6 @@ module OWNet
           path = @use_path + '/' + branch
           list = @connection.dir(path).find_all {|e| e.include? '/'}
           list.each do |entry|
-            begin
-              @connection.read(entry+'/type')
-            rescue UnknownSensor => ex
-              continue
-            end
             sensors << Sensor.new(entry, :connection => @connection)
           end
         end
@@ -285,5 +280,9 @@ module OWNet
         yield s if (!all and match > 0) or (all and match == opts.size)
       end
     end
+  end
+  
+  def self.sensor_by_id(id, opts={})
+    Sensor.new('/'+id, opts)
   end
 end
