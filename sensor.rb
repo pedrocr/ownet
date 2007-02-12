@@ -1,14 +1,31 @@
 module OWNet
+  # Exception raised when someone tries to set or query a non-existant
+  # OW attribute.
+  class AttributeError < RuntimeError
+    attr :name
+    def initialize(name)
+      @name = name
+    end
+    
+    def to_s
+      "No such attribute: #{@name}"
+    end
+  end
+
+  # This class abstracts the OW sensors. Attributes can be set and queried
+  # by accessing object attributes. Caching can be enabled and disabled
+  # and sensors can be listed and matched against their attributes.
   class Sensor
+    include Comparable
     attr_reader :path
   
+    # Initialize a sensor for a given path. opts are the same as in 
+    # Connection.new. The path is the OW path for the sensor.
     def initialize(path, opts = {})
       if opts[:connection]
         @connection = opts[:connection]
       else
-        opts[:server] = 'localhost' if !opts[:server]
-        opts[:port] = 4304 if !opts[:port]
-        @connection = Connection.new(opts[:server], opts[:port])
+        @connection = Connection.new(opts)
       end
 
       @attrs = {}
@@ -25,19 +42,9 @@ module OWNet
       self.use_cache = @use_cache
     end
     
-    def to_s
-      "Sensor(use_path=>\"%s\", type=>\"%s\")" %
-      [@use_path, @type]
-    end
-    
-    def <=>(other)
-      self.path <=> other.path
-    end
-    
-    def hash
-      self.path.hash
-    end
-    
+    private
+    # Implements the attributes for the sensor properties by reading and
+    # writing them with the current connection.
     def method_missing(name, *args)
       name = name.to_s
       if args.size == 0
@@ -58,6 +65,28 @@ module OWNet
       end
     end
     
+    public
+    # Converts to a string with the currnet path for the sensor which
+    # is different if caching is set to true or false.
+    def to_s
+      "Sensor(use_path=>\"%s\")" % @use_path
+    end
+    
+    # Compares two sensors. This is implementing by comparing their paths
+    # without taking into account caching. Two objects representing 
+    # access to the same sensor with and without caching will evaluate
+    # as being the same
+    def <=>(other)
+      self.path <=> other.path
+    end
+    
+    # Implement hash based on the path so that two equal sensors hash to
+    # the same value.
+    def hash
+      self.path.hash
+    end
+    
+    # Sets if owserver's caching is to be used or not.
     def use_cache=(use)
       @use_cache = use
       if use
@@ -76,10 +105,12 @@ module OWNet
       self.each_entry {|e| @attrs[e.tr('.','_')] = @use_path + '/' + e}
     end
     
+    # Iterates the list of entries for the current path.
     def each_entry
       entries.each {|e| yield e}   
     end
     
+    # The list of entries for the current path.
     def entries
       entries = []
       list = @connection.dir(@use_path)
@@ -90,11 +121,13 @@ module OWNet
       end
       entries
     end
-  
+    
+    # Iterates the list of sensors below the current path.
     def each_sensor(names = ['main', 'aux'])
       self.sensors(names).each {|s| yield s}
     end
     
+    # Gives the list of sensors that are below the current path.
     def sensors(names = ['main', 'aux'])
       sensors = []
       if @type == 'DS2409'
@@ -118,10 +151,20 @@ module OWNet
       sensors
     end
     
+    # Check if the sensor has a certain attribute
     def has_attr?(name)
       @attrs.include? name
     end
     
+    # Finds the set of children sensors that have a certain ammount of 
+    # characteristics. opts should be a hash listing the characteristics
+    # to be matched. For example:
+    # 
+    # #Match all DS18B20 sensors
+    # someSensor.find(:type => 'DS18B20')
+    #
+    # The :all keyword can be set to true or false (default) and find
+    # will match as an OR(false) or AND(true) condition.
     def find(opts)
       all = opts.delete(:all)
       
@@ -134,9 +177,5 @@ module OWNet
         yield s if (!all and match > 0) or (all and match == opts.size)
       end
     end
-  end
-  
-  def self.sensor_by_id(id, opts={})
-    Sensor.new('/'+id, opts)
   end
 end
