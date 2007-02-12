@@ -1,6 +1,14 @@
 module OWNet
   require 'socket'
   
+  ERROR = 0
+  NOP = 1
+  READ = 2
+  WRITE = 3
+  DIR = 4
+  SIZE = 5
+  PRESENCE = 6
+  
   # Exception raised when there's a short read from owserver
   class ShortRead < RuntimeError  
     def to_s
@@ -20,17 +28,62 @@ module OWNet
     end
   end
   
+  # Encapsulates a request to owserver
+  class Request
+    attr_accessor :function, :path, :value, :flags
+    
+    def initialize(opts={})
+      opts.each {|name, value| self.send(name.to_s+'=', value)}
+      @flags = 258
+    end
+    
+    private
+    def header
+      payload_len = self.path.size + 1
+      data_len = 0
+      case self.function
+      when READ
+        data_len = 8192
+      when WRITE
+        payload_len = path.size + 1 + value.size + 1
+        data_len = value.size
+      end
+      [0, payload_len, self.function, self.flags, data_len,
+       0].pack('NNNNNN')
+    end
+    
+    public
+    def write(socket)
+      socket.write(header)
+      case self.function
+      when READ, DIR
+        socket.write(path + "\000")
+      when WRITE
+        socket.write(path + "\000" + value + "\000")
+      end
+    end
+  end
+  
+  # Encapsulates a response from owserver
+  class Response
+    attr_accessor :data, :return_value
+
+    def initialize(socket)
+      data = socket.read(24)
+      raise ShortRead if !data || data.size != 24
+      
+      version, @payload_len, self.return_value, @format_flags,
+      @data_len, @offset = data.unpack('NNNNNN')
+      
+      if @payload_len > 0
+        @data = socket.read(@payload_len)[0..@data_len-1] 
+      end
+    end
+  end
+  
   # Abstracts away the connection to owserver
   class Connection
     attr_reader :server, :port
-    
-    ERROR = 0
-    NOP = 1
-    READ = 2
-    WRITE = 3
-    DIR = 4
-    SIZE = 5
-    PRESENCE = 6
     
     # Create a new connection. The default is to connect to localhost 
     # on port 4304. opts can contain a server and a port.
@@ -48,47 +101,19 @@ module OWNet
       @port = opts[:port] || 4304
     end
 
-    private    
-    def get_socket
-      socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
-      socket.connect(Socket.pack_sockaddr_in(self.port, self.server))
-      socket
-    end
-    
-    def _read_data(s)
-      data = s.read(24)
-      raise ShortRead if !data || data.size != 24
-      data
-    end
-
-    def pack(function, payload_len, data_len)
-      [0,           #version
-       payload_len, #payload length
-       function,    #type of function call
-       258,         #format flags
-       data_len,    #size of data element for read or write
-       0            #offset for read or write
-      ].pack('NNNNNN')
-    end
-    
-    def unpack(msg)
-      raise InvalidMessage, msg if msg.size != 24
-      
-      vals = msg.unpack('NNNNNN')
-      version      = vals[0]
-      payload_len  = vals[1]
-      ret_value    = vals[2]
-      format_flags = vals[3]
-      data_len     = vals[4]
-      offset       = vals[5]
-      
-      return [ret_value, payload_len, data_len]
-    end
-    
+    private
     def to_number(str)
       begin; return Integer(str); rescue ArgumentError; end
       begin; return Float(str); rescue ArgumentError; end
       str
+    end
+
+    def owread
+      Response.new(@socket)
+    end
+    
+    def owwrite(opts)
+      Request.new(opts).write(@socket)
     end
 
     public
@@ -100,58 +125,41 @@ module OWNet
     
     # Read a value from an OW path.
     def read(path)
-      s = get_socket
-      
-      smsg = pack(READ, path.size + 1, 8192)
-      s.write(smsg)
-      s.write(path + "\000")
-      
-      ret, payload_len, data_len = unpack(_read_data(s))
-        
-      if payload_len
-        data = s.read(payload_len)
-        s.close
-        return to_number(data[0..data_len-1])
-      else
-        s.close
-        return nil
-      end
+      owwrite(:path => path, :function => READ)
+      return to_number(owread.data)
     end
     
     # Write a value to an OW path.
     def write(path, value)
-      s = get_socket
-      
-      value = value.to_s
-      smsg = pack(WRITE, path.size + 1 + value.size + 1, value.size)
-      s.write(smsg)
-      s.write(path + "\000" + value + "\000")
-            
-      ret, payload_len, data_len = unpack(_read_data(s))
-      s.close
-      return ret
+      owwrite(:path => path, :value => value.to_s, :function => WRITE)
+      return owread.return_value
     end
     
     # List the contents of an OW path.
     def dir(path)
-      s = get_socket
-      smsg = pack(DIR, path.size + 1, 0)
-      s.write(smsg)
-      s.write(path + "\000")
+      owwrite(:path => path, :function => DIR)
       
       fields = []
       while true:
-        ret, payload_len, data_len = unpack(_read_data(s))
-        
-        if payload_len > 0
-          data = s.read(payload_len)
-          fields << data[0..data_len-1]
+        response = owread
+        if response.data
+          fields << response.data
         else
           break
         end
       end
-      s.close
       return fields
+    end
+    
+    [:dir, :read, :write].each do |m|
+       old = instance_method(m)
+       define_method(m) do |*args| 
+         @socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
+         @socket.connect(Socket.pack_sockaddr_in(@port, @server))
+         ret = old.bind(self).call(*args)
+         @socket.close
+         return ret
+       end
     end
   end
 end
