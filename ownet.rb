@@ -1,2 +1,2 @@
-require File.dirname(__FILE__)+'/connection.rb'
-require File.dirname(__FILE__)+'/sensor.rb'
+require File.dirname(__FILE__)+'/lib/connection.rb'
+require File.dirname(__FILE__)+'/lib/sensor.rb'
