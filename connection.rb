@@ -103,8 +103,7 @@ module OWNet
 
     private
     def to_number(str)
-      begin; return Integer(str); rescue ArgumentError; end
-      begin; return Float(str); rescue ArgumentError; end
+      begin; return Float(str); rescue ArgumentError; end if str
       str
     end
 
