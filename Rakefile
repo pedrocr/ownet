@@ -40,7 +40,8 @@ spec = Gem::Specification.new do |s|
   s.rdoc_options = RDOC_OPTIONS
   s.extra_rdoc_files = RDOC_EXTRA_FILES
   s.description = <<EOF
-A library that eases the creation of XML importers and exporters for ruby.
+A simple client that interfaces with the owfs project owserver to fetch sensor
+values.
 EOF
 end
 
