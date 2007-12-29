@@ -12,7 +12,7 @@ task :default => ['test']
 
 TEST_FILES = 'test/**/*.rb'
 CODE_FILES = 'lib/**/*.rb'
-EXAMPLE_FILES = 'lib/**/*.rb'
+EXAMPLE_FILES = 'examples/**/*.rb'
 
 
 PKG_FILES = FileList[TEST_FILES,
