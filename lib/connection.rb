@@ -66,6 +66,8 @@ module OWNet
   
   # Encapsulates a response from owserver
   class Response
+    PING_PAYLOAD = 4294967295 # Minus one interpreted as an unsigned int
+    
     attr_accessor :data, :return_value
 
     def initialize(socket)
@@ -75,9 +77,13 @@ module OWNet
       version, @payload_len, self.return_value, @format_flags,
       @data_len, @offset = data.unpack('NNNNNN')
       
-      if @payload_len > 0
-        @data = socket.read(@payload_len)[0..@data_len-1] 
+      if @payload_len > 0 && !isping? 
+        @data = socket.read(@payload_len)[@offset..@data_len+@offset-1] 
       end
+    end
+    
+    def isping?
+       @payload_len == PING_PAYLOAD
     end
   end
   
@@ -108,7 +114,10 @@ module OWNet
     end
 
     def owread
-      Response.new(@socket)
+      while true
+        resp = Response.new(@socket)
+        return resp unless resp.isping?
+      end
     end
     
     def owwrite(opts)
@@ -125,7 +134,7 @@ module OWNet
     # Read a value from an OW path.
     def read(path)
       owwrite(:path => path, :function => READ)
-      return to_number(owread.data)
+      to_number(owread.data)
     end
     
     # Write a value to an OW path.
