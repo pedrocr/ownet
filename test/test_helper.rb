@@ -1,7 +1,7 @@
 require 'test/unit'
 require 'yaml'
 require 'fileutils'
-require File.dirname(__FILE__)+'/../ownet.rb'
+require File.dirname(__FILE__)+'/../lib/ownet.rb'
 
 class Test::Unit::TestCase  
   def with_fake_owserver
