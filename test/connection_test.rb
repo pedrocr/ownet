@@ -1,8 +1,9 @@
 require File.dirname(__FILE__)+'/test_helper.rb'
 
 class TestConnection < Test::Unit::TestCase
-  BASE_DIR = ["/1F.67C6697351FF", "/10.4AEC29CDBAAB", "/bus.0", "/settings",
-              "/system", "/statistics", "/structure", "/simultaneous", "/alarm"]
+  BASE_DIR = ["/1F.67C6697351FF", "/10.4AEC29CDBAAB", "/bus.0", "/uncached", 
+              "/settings", "/system", "/statistics", "/structure", 
+              "/simultaneous", "/alarm"]
 
   def test_read
     with_fake_owserver do
