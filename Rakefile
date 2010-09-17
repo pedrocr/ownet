@@ -1,5 +1,5 @@
 PKG_NAME = 'ownet'
-PKG_VERSION = '0.0.2'
+PKG_VERSION = '0.0.3'
 
 require 'rake'
 require 'rake/testtask'
