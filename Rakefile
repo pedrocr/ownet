@@ -46,8 +46,6 @@ EOF
 end
 
 Rake::GemPackageTask.new(spec) do |pkg|
-  pkg.need_zip = true
-  pkg.need_tar = true
 end
 
 Rake::TestTask.new do |t|
@@ -59,7 +57,7 @@ Rake::RDocTask.new do |rd|
   rd.main = "README"
   rd.name = :docs
   rd.rdoc_files.include(RDOC_EXTRA_FILES, CODE_FILES)
-  rd.rdoc_dir = 'web/doc'
+  rd.rdoc_dir = 'doc'
   rd.title = "#{PKG_NAME} API"
   rd.options = RDOC_OPTIONS
 end
