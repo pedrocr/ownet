@@ -4,16 +4,26 @@ This is a simple client-side implementation of the owserver protocol from the ow
 
 == Usage
 
-Create a new connection. The default is to connect to localhost on port 4304. opts can contain a server and a port. For example:
+To test actually using the connection run owserver with fake sensors:
+
+  owserver --fake 1F,10
+
+And now list the contents of the root dir:
+
+  require 'ownet'
+  conn = OWNet::Connection.new
+  conn.dir('/')
+  #=> ["/1F.67C6697351FF", "/10.4AEC29CDBAAB", "/bus.0", "/uncached" ...
+
+To read a value do:
+
+  conn.read('/10.4AEC29CDBAAB/temperature')
+  #=> 36.4784 (Returns a random value with owserver --fake)
+
+To write a value do:
   
-  #Connect to a remote server on the default port:
-  Connection.new(:server=>"my.server.com")
-
-  #Connect to a local server on a non-standard port:
-  Connection.new(:port=>20200)
-
-  #Connect to a remote server on a non-standard port:
-  Connection.new(:server=>"my.server.com", :port=>20200)
+  conn.write('/1F.67C6697351FF/clearevent', 1)
+  #=> 0
 
 == Author
 
