@@ -113,61 +113,57 @@ module OWNet
       str
     end
 
-    def owread
+    def owread(socket)
       while true
-        resp = Response.new(@socket)
+        resp = Response.new(socket)
         return resp unless resp.isping?
       end
     end
     
-    def owwrite(opts)
-      Request.new(opts).write(@socket)
+    def owwrite(socket, opts)
+      Request.new(opts).write(socket)
     end
 
-    public
-    # Converts to a string containing the server and port of the 
-    # connection.
-    def to_s
-      "OWNetConnection(%s:%s)" % [self.server, self.port]
+    def owconnect(&block)
+      socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
+      socket.connect(Socket.pack_sockaddr_in(@port, @server))
+      yield socket
+      socket.close
     end
-    
+
+    public    
     # Read a value from an OW path.
     def read(path)
-      owwrite(:path => path, :function => READ)
-      to_number(owread.data)
+      owconnect do |socket|
+        owwrite(socket,:path => path, :function => READ)
+        return to_number(owread(socket).data)
+      end
     end
     
     # Write a value to an OW path.
     def write(path, value)
-      owwrite(:path => path, :value => value.to_s, :function => WRITE)
-      return owread.return_value
+      owconnect do |socket|
+        owwrite(socket, :path => path, :value => value.to_s, :function => WRITE)
+        return owread(socket).return_value
+      end
     end
     
     # List the contents of an OW path.
     def dir(path)
-      owwrite(:path => path, :function => DIR)
-      
-      fields = []
-      while true:
-        response = owread
-        if response.data
-          fields << response.data
-        else
-          break
+      owconnect do |socket|
+        owwrite(socket,:path => path, :function => DIR)
+        
+        fields = []
+        while true:
+          response = owread(socket)
+          if response.data
+            fields << response.data
+          else
+            break
+          end
         end
+        return fields
       end
-      return fields
-    end
-    
-    [:dir, :read, :write].each do |m|
-       old = instance_method(m)
-       define_method(m) do |*args| 
-         @socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
-         @socket.connect(Socket.pack_sockaddr_in(@port, @server))
-         ret = old.bind(self).call(*args)
-         @socket.close
-         return ret
-       end
     end
   end
 end
