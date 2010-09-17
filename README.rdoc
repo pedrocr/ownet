@@ -1,0 +1,21 @@
+= ownet
+
+This is a simple client-side implementation of the owserver protocol from the owfs project. It allows you to query any owserver over the network (or locally).
+
+== Usage
+
+Create a new connection. The default is to connect to localhost on port 4304. opts can contain a server and a port. For example:
+  
+  #Connect to a remote server on the default port:
+  Connection.new(:server=>"my.server.com")
+
+  #Connect to a local server on a non-standard port:
+  Connection.new(:port=>20200)
+
+  #Connect to a remote server on a non-standard port:
+  Connection.new(:server=>"my.server.com", :port=>20200)
+
+== Author
+
+Code written by Pedro Côrte-Real <pedro@pedrocr.net> in part based on the ownet python client by Peter Kropf.
+
