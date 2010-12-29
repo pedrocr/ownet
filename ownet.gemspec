@@ -31,6 +31,7 @@ Gem::Specification.new do |s|
     examples/test.rb
     lib/connection.rb
     lib/ownet.rb
+    ownet.gemspec
     test/connection_test.rb
     test/test_helper.rb
   ]
