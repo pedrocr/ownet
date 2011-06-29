@@ -1,6 +1,7 @@
 require 'test/unit'
 require 'yaml'
 require 'fileutils'
+require File.dirname(__FILE__)+'/mock_owserver'
 require File.dirname(__FILE__)+'/../lib/ownet.rb'
 
 class Test::Unit::TestCase  
@@ -15,5 +16,14 @@ class Test::Unit::TestCase
     yield
     Process.kill("TERM", pid)
     Process.waitpid(pid)
+  end
+  def with_mock_owserver(paths=nil)
+    server = nil
+    server = MockOWServer::Server.new(:paths => paths)
+    t = Thread.new do 
+      server.run
+    end
+    yield server
+    t.join
   end
 end

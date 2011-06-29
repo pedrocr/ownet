@@ -34,7 +34,7 @@ module OWNet
     
     def initialize(opts={})
       opts.each {|name, value| self.send(name.to_s+'=', value)}
-      @flags = 258
+      @flags = 258 #FIXME: What is this?
     end
     
     private
@@ -43,7 +43,7 @@ module OWNet
       data_len = 0
       case self.function
       when READ
-        data_len = 8192
+        data_len = 8192 #FIXME: What is this?
       when WRITE
         payload_len = path.size + 1 + value.size + 1
         data_len = value.size
@@ -73,11 +73,12 @@ module OWNet
     def initialize(socket)
       data = socket.read(24)
       raise ShortRead if !data || data.size != 24
-      
+        
       version, @payload_len, self.return_value, @format_flags,
       @data_len, @offset = data.unpack('NNNNNN')
       
       if @payload_len > 0 && !isping? 
+        #FIXME: Guard against a short read here
         @data = socket.read(@payload_len)[@offset..@data_len+@offset-1] 
       end
     end
@@ -127,8 +128,11 @@ module OWNet
     def owconnect(&block)
       socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
       socket.connect(Socket.pack_sockaddr_in(@port, @server))
-      yield socket
-      socket.close
+      begin
+        yield socket
+      ensure
+        socket.close
+      end
     end
 
     public    
