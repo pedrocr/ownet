@@ -1,4 +1,5 @@
 require 'socket'
+require 'thread'
 
 module MockOWServer
   ERROR = 0
@@ -61,36 +62,60 @@ module MockOWServer
 
   class Server
     attr_accessor :paths
-    attr_reader :write_value
+
+    def write_value
+      @mutex.synchronize do
+        @write_value
+      end
+    end
 
     def initialize(opts={})
       @address = opts[:address] || 'localhost'
       @port = opts[:port] || 4304
-      @stop = false
       @paths = opts[:paths] || {}
-
-      @socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
-      @socket.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEADDR, true)
-      @socket.bind(Socket.pack_sockaddr_in(@port, @address))
-      @socket.listen 1
+      @mutex = Mutex.new
     end
 
-    def run
-      client, client_sockaddr = @socket.accept
-      req = Request.new(client)
-      case req.function
-      when READ
-        Response.new(:data => @paths[req.path]).write(client)
-      when DIR
-        (@paths[req.path]||[]).each do |dir|
-          Response.new(:data => dir).write(client)
+    def run!
+      @stopped = false
+      @thread = Thread.new do
+        socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
+        socket.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEADDR, true)
+        socket.bind(Socket.pack_sockaddr_in(@port, @address))
+        socket.listen 10
+        while !@stopped
+          begin
+            client, client_sockaddr = socket.accept_nonblock
+            respond(client)
+          rescue Errno::EAGAIN
+            sleep 0.1
+          end
         end
-        Response.new.write(client)
-      when WRITE
-        @write_value = req.data
-        Response.new.write(client)
+        socket.close
       end
-      @socket.close
+    end
+
+    def respond(client)
+      @mutex.synchronize do
+        req = Request.new(client)
+        case req.function
+        when READ
+          Response.new(:data => @paths[req.path]).write(client)
+        when DIR
+          (@paths[req.path]||[]).each do |dir|
+            Response.new(:data => dir).write(client)
+          end
+          Response.new.write(client)
+        when WRITE
+          @write_value = req.data
+          Response.new.write(client)
+        end
+      end
+    end
+
+    def stop! 
+      @stopped = true
+      @thread.join
     end
   end
 end

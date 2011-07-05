@@ -18,12 +18,12 @@ class Test::Unit::TestCase
     Process.waitpid(pid)
   end
   def with_mock_owserver(paths=nil)
-    server = nil
     server = MockOWServer::Server.new(:paths => paths)
-    t = Thread.new do 
-      server.run
+    server.run!
+    begin
+      yield server
+    ensure
+      server.stop!
     end
-    yield server
-    t.join
   end
 end
