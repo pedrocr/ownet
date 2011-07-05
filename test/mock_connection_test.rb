@@ -22,8 +22,25 @@ class TestMockConnection < Test::Unit::TestCase
   def test_write
     with_mock_owserver do |server|
       c = OWNet::Connection.new
-      assert_equal 0, c.write("/test","abc")
+      assert_equal 0, c.write("/test","abc")  
       assert_equal "abc", server.write_value
+    end
+  end
+
+  def test_read_in_hub
+    temperature = "/10.85EC3B020800"
+    humidity = "/26.CFD6F1000000"
+    hubs = ["/1F.A65A05000000", "/1F.365B05000000", "/1F.B15A05000000"]
+    paths = {'/'=>hubs}
+    channels = hubs.map{|hub| ['main','aux'].map {|suffix| hub+'/'+suffix}}.flatten
+    channels.each {|channel| paths[channel] = []}
+    paths[channels[0]] = [temperature,humidity].map{|suffix| channels[0]+suffix}
+    paths[channels[0]+temperature+'/temperature'] = '25'
+    paths[channels[0]+humidity+'/humidity'] = '50'
+    with_mock_owserver(paths) do |server|
+      c = OWNet::Connection.new
+      assert_equal 25, c.read(temperature+"/temperature")
+      assert_equal 50, c.read(humidity+"/humidity")
     end
   end
 end

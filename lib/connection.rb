@@ -113,7 +113,31 @@ module OWNet
 
     private
     def do_op(op, path, *args)
-      @conn.send(op, path, *args)
+      ret = @conn.send(op, path, *args)
+      serial = path[1..15]
+      if ret.nil? and serial =~ /[0-9A-Z]{2,2}\.[0-9A-Z]{12,12}/
+        if newbasepath = find_recursive(serial)
+          newpath = newbasepath+path[16..-1]
+          ret = @conn.send(op, newpath, *args)
+        end
+      end
+      ret
+    end
+
+    def find_recursive(serial, path='/')
+      dirs = @conn.send(:dir, path)||[]
+      dirs.each do |dir|
+        dir = dir.split("/")[-1]
+        if dir == serial
+          return path+"/"+serial
+        elsif dir =~ /1F\.[0-9A-Z]{12,12}/ #DS2409
+          ['main','aux'].each do |side| 
+            ret = find_recursive(serial,"/"+(path.split("/")+[dir,side]).join("/"))
+            return ret if ret
+          end
+        end
+      end
+      nil
     end
   end
 
