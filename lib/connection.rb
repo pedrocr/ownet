@@ -105,25 +105,31 @@ module OWNet
     # Connection.new(:server=>"my.server.com", :port=>20200)
     def initialize(opts={})
       @conn = RawConnection.new(opts)
+      @serialcache = {}
     end
 
     def read(path); do_op(:read, path); end
     def dir(path); do_op(:dir, path); end
-    def write(path, value); do_op(:write, path, value); end
+    def write(path, value); @conn.send(:write, path, value); end
 
     private
-    def do_op(op, path, *args)
-      ret = @conn.send(op, path, *args)
+    def do_op(op, path)
       basepath = "/"
       if path[0..8] == "/uncached"
         path = path[9..-1]
         basepath = "/uncached"
       end
       serial = path[1..15]
+      ret = if cachepath = @serialcache[serial]
+        @conn.send(op, cachepath+path[16..-1])
+      else
+        @conn.send(op, path)
+      end
       if (ret.nil? or ret == []) and serial =~ /[0-9A-Z]{2,2}\.[0-9A-Z]{12,12}/
         if newbasepath = find_recursive(serial, basepath)
+          @serialcache[serial] = newbasepath
           newpath = newbasepath+path[16..-1]
-          ret = @conn.send(op, newpath, *args)
+          ret = @conn.send(op, newpath)
         end
       end
       ret

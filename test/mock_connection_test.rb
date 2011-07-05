@@ -41,15 +41,23 @@ class TestMockConnection < Test::Unit::TestCase
     paths[channels[0]+humidity+'/humidity'] = '50'
     paths[channels[0]+humidity] = fakedir
     with_mock_owserver(paths) do |server|
-      c = OWNet::Connection.new
       ['','/uncached'].each do |prefix|
+        c = OWNet::Connection.new
+        server.nrequests = 0
         assert_equal 25, c.read(prefix+temperature+"/temperature")
+        assert_reqs server, 4
+        server.nrequests = 0
         assert_equal fakedir, c.dir(prefix+temperature)
+        assert_reqs server, 1
         assert_equal 50, c.read(prefix+humidity+"/humidity")
         assert_equal fakedir, c.dir(prefix+humidity)
         assert_equal nil, c.read(prefix+"/no_such_path")
         assert_equal [], c.dir(prefix+"/no_such_path")
       end
     end
+  end
+
+  def assert_reqs(server,reqs)
+    assert_equal reqs, server.nrequests, "Expecting to do #{reqs} requests but did #{server.nrequests}"
   end
 end

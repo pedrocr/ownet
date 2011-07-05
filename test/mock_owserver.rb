@@ -75,6 +75,18 @@ module MockOWServer
       end
     end
 
+    def nrequests
+      @mutex.synchronize do
+        @nrequests
+      end
+    end
+
+    def nrequests=(value)
+      @mutex.synchronize do
+        @nrequests=value
+      end
+    end
+
     def initialize(opts={})
       @address = opts[:address] || 'localhost'
       @port = opts[:port] || 4304
@@ -90,6 +102,7 @@ module MockOWServer
 
     def run!
       @stopped = false
+      @nrequests = 0
       @thread = Thread.new do
         socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
         socket.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEADDR, true)
@@ -112,6 +125,7 @@ module MockOWServer
         req = Request.new(client)
         @req_path = req.path
         @req_data = req.data
+        @nrequests += 1
         if req.path[0..1] == '//'
           $stderr.puts "Double slash path asked for: #{req.path}" 
           Response.new.write(client)
