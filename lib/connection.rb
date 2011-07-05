@@ -104,6 +104,23 @@ module OWNet
     # #Connect to a remote server on a non-standard port:
     # Connection.new(:server=>"my.server.com", :port=>20200)
     def initialize(opts={})
+      @conn = RawConnection.new(opts)
+    end
+
+    def read(path); do_op(:read, path); end
+    def dir(path); do_op(:dir, path); end
+    def write(path, value); do_op(:write, path, value); end
+
+    private
+    def do_op(op, path, *args)
+      @conn.send(op, path, *args)
+    end
+  end
+
+  class RawConnection
+    # Connection without any of the hub discovery niceties
+
+    def initialize(opts={})
       @server = opts[:server] || 'localhost'
       @port = opts[:port] || 4304
     end
