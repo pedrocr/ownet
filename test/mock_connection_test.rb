@@ -23,7 +23,7 @@ class TestMockConnection < Test::Unit::TestCase
     with_mock_owserver do |server|
       c = OWNet::Connection.new
       assert_equal 0, c.write("/test","abc")  
-      assert_equal "abc", server.write_value
+      assert_equal "abc", server.req_data
     end
   end
 

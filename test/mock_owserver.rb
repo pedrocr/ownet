@@ -63,9 +63,15 @@ module MockOWServer
   class Server
     attr_accessor :paths
 
-    def write_value
+    def req_path
       @mutex.synchronize do
-        @write_value
+        @req_path
+      end
+    end
+
+    def req_data
+      @mutex.synchronize do
+        @req_data
       end
     end
 
@@ -104,6 +110,8 @@ module MockOWServer
     def respond(client)
       @mutex.synchronize do
         req = Request.new(client)
+        @req_path = req.path
+        @req_data = req.data
         if req.path[0..1] == '//'
           $stderr.puts "Double slash path asked for: #{req.path}" 
           Response.new.write(client)
@@ -117,7 +125,6 @@ module MockOWServer
             end
             Response.new.write(client)
           when WRITE
-            @write_value = req.data
             Response.new.write(client)
           end
         end
