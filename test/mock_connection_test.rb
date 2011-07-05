@@ -41,6 +41,7 @@ class TestMockConnection < Test::Unit::TestCase
       c = OWNet::Connection.new
       assert_equal 25, c.read(temperature+"/temperature")
       assert_equal 50, c.read(humidity+"/humidity")
+      assert_equal nil, c.read("/no_such_path")
     end
   end
 end
