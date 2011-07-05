@@ -114,9 +114,14 @@ module OWNet
     private
     def do_op(op, path, *args)
       ret = @conn.send(op, path, *args)
+      basepath = "/"
+      if path[0..8] == "/uncached"
+        path = path[9..-1]
+        basepath = "/uncached"
+      end
       serial = path[1..15]
-      if ret.nil? and serial =~ /[0-9A-Z]{2,2}\.[0-9A-Z]{12,12}/
-        if newbasepath = find_recursive(serial)
+      if (ret.nil? or ret == []) and serial =~ /[0-9A-Z]{2,2}\.[0-9A-Z]{12,12}/
+        if newbasepath = find_recursive(serial, basepath)
           newpath = newbasepath+path[16..-1]
           ret = @conn.send(op, newpath, *args)
         end
@@ -124,15 +129,19 @@ module OWNet
       ret
     end
 
-    def find_recursive(serial, path='/')
+    def find_recursive(serial,path)
       dirs = @conn.send(:dir, path)||[]
       dirs.each do |dir|
         dir = dir.split("/")[-1]
         if dir == serial
           return path+"/"+serial
         elsif dir =~ /1F\.[0-9A-Z]{12,12}/ #DS2409
-          ['main','aux'].each do |side| 
-            ret = find_recursive(serial,"/"+(path.split("/")+[dir,side]).join("/"))
+          ['main','aux'].each do |side|
+            split = path.split("/")
+            split.delete("")
+            split += [dir,side]
+            newpath = "/"+split.join("/")
+            ret = find_recursive(serial,newpath)
             return ret if ret
           end
         end

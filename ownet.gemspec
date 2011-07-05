@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
 
   s.name              = 'ownet'
   s.version           = '0.1.0'
-  s.date              = '2010-12-29'
+  s.date              = '2011-07-05'
 
   s.summary     = "Client to connect to one-wire devices through owserver of the OWFS project"
   s.description = "A simple client that interfaces with owserver from the owfs project"
@@ -33,6 +33,8 @@ Gem::Specification.new do |s|
     lib/ownet.rb
     ownet.gemspec
     test/connection_test.rb
+    test/mock_connection_test.rb
+    test/mock_owserver.rb
     test/test_helper.rb
   ]
   # = MANIFEST =

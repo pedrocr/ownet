@@ -72,7 +72,13 @@ module MockOWServer
     def initialize(opts={})
       @address = opts[:address] || 'localhost'
       @port = opts[:port] || 4304
-      @paths = opts[:paths] || {}
+      paths = opts[:paths] || {}
+      @paths = {}
+      paths.each do |k,v| 
+        canon = canonical_path(k)
+        @paths[canon] = v
+        @paths[canonical_path("uncached/"+canon)] = v
+      end
       @mutex = Mutex.new
     end
 
@@ -98,17 +104,22 @@ module MockOWServer
     def respond(client)
       @mutex.synchronize do
         req = Request.new(client)
-        case req.function
-        when READ
-          Response.new(:data => @paths[req.path]).write(client)
-        when DIR
-          (@paths[req.path]||[]).each do |dir|
-            Response.new(:data => dir).write(client)
+        if req.path[0..1] == '//'
+          $stderr.puts "Double slash path asked for: #{req.path}" 
+          Response.new.write(client)
+        else
+          case req.function
+          when READ
+            Response.new(:data => @paths[canonical_path(req.path)]).write(client)
+          when DIR
+            (@paths[canonical_path(req.path)]||[]).each do |dir|
+              Response.new(:data => dir).write(client)
+            end
+            Response.new.write(client)
+          when WRITE
+            @write_value = req.data
+            Response.new.write(client)
           end
-          Response.new.write(client)
-        when WRITE
-          @write_value = req.data
-          Response.new.write(client)
         end
       end
     end
@@ -116,6 +127,13 @@ module MockOWServer
     def stop! 
       @stopped = true
       @thread.join
+    end
+
+    private
+    def canonical_path(path)
+      split = path.split("/")
+      split.delete("")
+      split.join("/")
     end
   end
 end

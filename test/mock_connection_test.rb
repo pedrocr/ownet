@@ -27,7 +27,8 @@ class TestMockConnection < Test::Unit::TestCase
     end
   end
 
-  def test_read_in_hub
+  def test_ops_with_hub
+    fakedir = ["no_such_file","another"]
     temperature = "/10.85EC3B020800"
     humidity = "/26.CFD6F1000000"
     hubs = ["/1F.A65A05000000", "/1F.365B05000000", "/1F.B15A05000000"]
@@ -36,12 +37,19 @@ class TestMockConnection < Test::Unit::TestCase
     channels.each {|channel| paths[channel] = []}
     paths[channels[0]] = [temperature,humidity].map{|suffix| channels[0]+suffix}
     paths[channels[0]+temperature+'/temperature'] = '25'
+    paths[channels[0]+temperature] = fakedir
     paths[channels[0]+humidity+'/humidity'] = '50'
+    paths[channels[0]+humidity] = fakedir
     with_mock_owserver(paths) do |server|
       c = OWNet::Connection.new
-      assert_equal 25, c.read(temperature+"/temperature")
-      assert_equal 50, c.read(humidity+"/humidity")
-      assert_equal nil, c.read("/no_such_path")
+      ['','/uncached'].each do |prefix|
+        assert_equal 25, c.read(prefix+temperature+"/temperature")
+        assert_equal fakedir, c.dir(prefix+temperature)
+        assert_equal 50, c.read(prefix+humidity+"/humidity")
+        assert_equal fakedir, c.dir(prefix+humidity)
+        assert_equal nil, c.read(prefix+"/no_such_path")
+        assert_equal [], c.dir(prefix+"/no_such_path")
+      end
     end
   end
 end
