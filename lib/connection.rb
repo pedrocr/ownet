@@ -135,7 +135,10 @@ module OWNet
       ret
     end
 
-    def find_recursive(serial,path)
+    def find_recursive(serial,path,depth=0)
+      if depth > 5
+        return nil
+      end
       dirs = @conn.send(:dir, path)||[]
       dirs.each do |dir|
         dir = dir.split("/")[-1]
@@ -147,7 +150,7 @@ module OWNet
             split.delete("")
             split += [dir,side]
             newpath = "/"+split.join("/")
-            ret = find_recursive(serial,newpath)
+            ret = find_recursive(serial,newpath,depth+1)
             return ret if ret
           end
         end

@@ -60,4 +60,18 @@ class TestMockConnection < Test::Unit::TestCase
   def assert_reqs(server,reqs)
     assert_equal reqs, server.nrequests, "Expecting to do #{reqs} requests but did #{server.nrequests}"
   end
+
+  def test_recursive_stop_with_hub
+    hub = "/1F.A65A05000000"
+    paths = {}
+    (0..20).each do |i|
+      paths["/"+(hub+"/main")*i] = [(hub+"/main")*i+"/"+hub]
+      paths["/"+(hub+"/aux")*i] = [(hub+"/aux")*i+"/"+hub]
+    end
+    with_mock_owserver(paths) do |server|
+      c = OWNet::Connection.new
+      assert_equal nil, c.read("/10.85EC3B020800/temperature")
+      assert_reqs server, 20
+    end
+  end
 end
