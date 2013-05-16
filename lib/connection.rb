@@ -217,7 +217,7 @@ module OWNet
         owwrite(socket,:path => path, :function => DIR)
         
         fields = []
-        while true:
+        while true
           response = owread(socket)
           if response.data
             fields << response.data

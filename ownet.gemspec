@@ -6,8 +6,8 @@ Gem::Specification.new do |s|
   s.platform = Gem::Platform::RUBY
 
   s.name              = 'ownet'
-  s.version           = '0.2.0'
-  s.date              = '2011-07-05'
+  s.version           = '0.2.1'
+  s.date              = '2013-05-16'
 
   s.summary     = "Client to connect to one-wire devices through owserver of the OWFS project"
   s.description = "A simple client that interfaces with owserver from the owfs project"
