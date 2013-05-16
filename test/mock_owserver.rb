@@ -98,25 +98,26 @@ module MockOWServer
         @paths[canonical_path("uncached/"+canon)] = v
       end
       @mutex = Mutex.new
+
+      @socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
+      @socket.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEADDR, true)
+      @socket.bind(Socket.pack_sockaddr_in(@port, @address))
+      @socket.listen 10
     end
 
     def run!
       @stopped = false
       @nrequests = 0
       @thread = Thread.new do
-        socket = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
-        socket.setsockopt(Socket::SOL_SOCKET,Socket::SO_REUSEADDR, true)
-        socket.bind(Socket.pack_sockaddr_in(@port, @address))
-        socket.listen 10
         while !@stopped
           begin
-            client, client_sockaddr = socket.accept_nonblock
+            client, client_sockaddr = @socket.accept_nonblock
             respond(client)
           rescue Errno::EAGAIN
             sleep 0.1
           end
         end
-        socket.close
+        @socket.close
       end
     end
 
